@@ -4,6 +4,8 @@ This repository adds **Neural Amp Modeler (NAM) A2 Lite** to the stock Line 6 fi
 
 **Not a programmer? Use the setup page: [nocaseguy.github.io/hx-stomp-nam-lite/web/](https://nocaseguy.github.io/hx-stomp-nam-lite/web/).** It builds the firmware from your own Line 6 file, converts your captures and guides you through every step, all in your browser, with nothing to install and nothing uploaded. See [The setup page](#the-setup-page-no-install).
 
+This fork also carries the **CustomOS** features of [alenauta/hx-stomp-customOS](https://github.com/alenauta/hx-stomp-customOS) (its M4 feature engine, `tools/patch_menu.py` and `tools/features/`), on top of this repository's newer NAM A2 Lite (ten knobs, tone stack, loudness, HX Edit-safe preset ID 555). They are built into the HX Stomp image only; the XL and HX Effects builds are NAM A2 Lite alone. The output file is `build/<unit>_v3.80.0_CustomOS.hxf`. BPM, DSP meter, long press and more snapshots need Apple's Command Line Tools (`xcode-select --install`); the boot screen needs macOS (`sips`, `swift`) or a 320x240 PNG.
+
 ## Supported devices
 
 | Device | Stock firmware (the build checks its MD5) | NAM A2 Lite in the menu | Status |
@@ -75,6 +77,74 @@ Earlier changes are in [CHANGELOG.md](CHANGELOG.md).
 - The capture's name: on the HX Stomp and XL the block's title on the edit screen shows the name of the IR the Model knob selects (the knob itself shows the number); on the HX Effects, see [HX Effects](#hx-effects).
 
 Everything else in the firmware stays stock 3.80.0, except that the build removes **Xenomorph Fuzz Mono** to give NAM its place (Xenomorph Fuzz Stereo stays). A preset of yours that uses Xenomorph Fuzz Mono would open NAM A2 Lite in its place.
+
+## CustomOS features (HX Stomp only)
+
+Each feature is a module in `tools/features/`. The tuner settings are always built in. The others are off by default, and the build adds them when their switch is set (an environment variable, or a `build.py` option). Switches combine. Every feature here has run on an HX Stomp from RAM. 
+
+| Feature | Switch | What it does |
+|---|---|---|
+| **Tuner** | always on | Tuner Activation and Lock Tuner Settings (below) |
+| **BPM** | `HX_BPM=1` | The tempo at the top left of the Home screen, and a beat dot that blinks with the TAP footswitch's ring. The dot keeps the beat in Preset and Snapshot footswitch modes too. |
+| **DSP meter** | `HX_DSP_METER=1` | Each block in the Edit view shows its share of the DSP in per cent, and the top right corner shows the blocks' total. |
+| **Long press** | `HX_LONG_PRESS=1` | In Stomp mode, hold a footswitch for 1 s for a second action: the tuner, FS4 or FS5, or a virtual footswitch FS6–FS10. A tap still toggles the switch's own blocks. See [Long press](#long-press). |
+| **More snapshots** | `HX_MORE_SNAPSHOTS=1` | Six snapshots a preset: press the lit snapshot footswitch again to flip between snapshots 1–3 and 4–6. Snapshots 4–6 are saved with the preset. See [More snapshots](#more-snapshots). |
+| **Boot screen** | `--splash`, `--splash-text` | Your own boot picture and boot text, with emoji. See [Boot screen](#boot-screen). |
+
+```sh
+HX_BPM=1 HX_DSP_METER=1 HX_MORE_SNAPSHOTS=1 python3 build.py path/to/HX_Stomp_v3.80.0_0x103966115.hxf
+```
+
+### Custom settings
+
+The features' settings are in Global Settings, in a seventh section called **CustomOS**, after Displays (press right past Displays). It has no icon in the section strip, so none is lit while you are in it. Each feature that's built in has its own page there.
+
+| Feature | Setting | Values | What it does |
+|---|---|---|---|
+| Tuner | **Tuner Activation** | **Hold** (default), **Press** | A footswitch assigned TAP/Tunr normally taps the tempo, and holding it opens the tuner. On **Press**, pressing it opens the tuner at once and the tempo is no longer tapped. It follows the assignment, so it works on whichever footswitch has TAP/Tunr. |
+| Tuner | **Lock Tuner Settings** | **Off** (default), **On** | On stops the tuner's settings (Output, Refrnc, Type, Trails, Offsets) from changing: knob turns and the knob presses that reset an item to its default are ignored. Paging between the tuner's settings screens still works. |
+| BPM | **BPM Font** | **41 Lite** (default), 35 Bold, 28 Bold, 28 Lite, 21 Bold, 21 Reg | The tempo's font |
+| BPM | **BPM Color** | **White** (default), Gray, Red, Orange, Yellow, Green, Cyan, Blue, Purple | The tempo's and the dot's colour |
+| BPM | **BPM Dot Pos** | **Left** (default), Right, Both | Where the beat dot sits, beside the preset number |
+| Long press | **FS1 Hold** … **FS5 Hold** | Off, Tuner, FS4, FS5, FS6 … FS10 (defaults FS6 … FS10) | What holding that footswitch for 1 s does. FS4 and FS5 are external switches. |
+| DSP meter | **DSP Disp** | **Used/All** (default, e.g. `47/75`), Free (`28`), Used% (`63%`) | What the top right corner shows. "All" is 75: the firmware's 90% preset limit less its fixed 15%. |
+
+The HX Stomp keeps a setting's value under its ID, which `tools/setting_ids.py` assigns. If a value another build stored under that ID is out of range, the menu shows the setting's default.
+
+### Long press
+
+In Stomp footswitch mode, each of FS1–FS5 can have a Hold action (Global Settings > CustomOS). Holding the switch for 1 s runs it; a tap still toggles the switch's own blocks, on release instead of on press, since the press can't tell yet whether it will become a hold.
+
+- **Tuner** opens the tuner, as holding TAP does.
+- **FS4, FS5** press that footswitch, as an external switch would.
+- **FS6 … FS10** are virtual footswitches. Each toggles the blocks you assign to it: in a block's Bypass Assign, set MIDI In to FS6 … FS10 (the first five steps up from Off). The assignment is saved in the preset, and parameters assigned to the same footswitch through Controller Assign follow it too. They are MIDI CC 20–24 underneath, which is how HX Edit and other MIDI gear see them.
+- A switch with Hold **Off**, a momentary switch, and the Preset and Snapshot footswitch modes work as stock.
+
+### More snapshots
+
+With Footswitch Mode on Snapshot, the three footswitches select snapshots 1–3 as usual. Press the lit one again and the same footswitches select snapshots 4–6; press the lit one again to come back.
+
+- **Which bank you're in:** in 4–6, the camera icon at the top right and the footswitch labels show 4, 5 or 6.
+- **New snapshots:** the first time you flip to a preset's 4–6, each one starts as a copy of the snapshot you flipped from. Edit them as any snapshot: snapshot-controlled parameters, block bypass, tempo and names are kept per snapshot.
+- **Saving:** a save keeps all six with the preset. Saving while in 4–6, you hear the matching snapshot of 1–3 for a moment, as the save writes 1–3 first.
+- **Stock firmware and HX Edit:** a preset saved with 4–6 still loads on a stock firmware, as snapshots 1–3, and the stock firmware drops 4–6 if it saves the preset again. HX Edit opens, exports and imports these presets, but its exports (`.hlx`) and backups (`.hxb`) hold snapshots 1–3 only. Snapshots 4–6 live on the HX Stomp.
+- **What else changes:** pressing the lit snapshot footswitch no longer does what Reselect Snapshot says. Next and previous snapshot, MIDI CC 69 and HX Edit's snapshot buttons work within the bank you're in.
+
+### Boot screen
+
+```sh
+python3 build.py path/to/HX_Stomp_v3.80.0_0x103966115.hxf --splash my_picture.jpg --splash-text "HXS OS v0.1"
+```
+
+- `--splash` takes any picture macOS can open (PNG, JPEG, HEIC, ...) at any size. The screen is **320x240**; a 320x240 PNG is used exactly as it is, and anything else is converted to it with macOS's `sips`: scaled to cover the screen and cropped at the centre, or with `--splash-fit fit`, scaled to fit inside it on black. Off macOS, give a 320x240 PNG.
+- The loading bar crosses the picture about halfway down, and the text sits on it in the bottom 40 rows, in grey (`0xb1b1b1`), so keep the bottom darkish.
+- `--splash-text` replaces "Firmware 3.80.0" with up to 23 characters: ASCII, and emoji, each of which counts as one, e.g. `--splash-text "HXS OS v0.1 🎸"`.
+- Each emoji becomes a colour glyph of the line's font, 18 px tall, level with the capitals. On macOS it's rendered from Apple Color Emoji; `--splash-glyph 🎸=guitar.png` (repeatable) gives your own picture instead, and off macOS it's required. A line with emoji is drawn white, not grey, as the firmware shows a glyph's own colours only on a white line.
+- The boot screen is a CustomOS feature (`tools/features/splash.py`). The flags set its inputs `HX_SPLASH`, `HX_SPLASH_FIT`, `HX_SPLASH_TEXT` and `HX_SPLASH_GLYPHS`, which work as environment variables too, as the other features' flags do.
+- `python3 tools/splash_topo.py out.png [--seed N]` draws a neon contour-map picture to start from; `python3 tools/patch_splash.py export firmware.hxf out.png` saves the picture an image has now.
+- The bootloader shows its own copy of the stock picture for a moment at power-on, before the firmware starts; that copy is not changed.
+
+This also changes the image store (part 8 of the 15), and with emoji, the font table (part 7).
 
 ## What this repository contains, and what it doesn't
 
@@ -269,6 +339,7 @@ docs/research/                working notes: measurements on the unit, studies, 
 
 ## Credits
 
+- **alenauta** ([alenauta/hx-stomp-customOS](https://github.com/alenauta/hx-stomp-customOS)) and its contributors: the CustomOS feature engine, tuner settings, BPM, DSP meter, long press, more snapshots and boot screen, merged here from its commit `ee58fe1`.
 - **Med Hamza**: the photo of NAM A2 Lite running on an HX Stomp XL.
 - **Scott** ([scottlynn73/hx-effects-nam-lite](https://github.com/scottlynn73/hx-effects-nam-lite)): the first HX Effects port, which the HX Effects support here builds on.
 - [Neural Amp Modeler](https://github.com/sdatkinson/neural-amp-modeler) by Steven Atkinson: the model format NAM A2 Lite runs.

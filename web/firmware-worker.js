@@ -61,6 +61,18 @@ var SOURCES = [
   "tools/l6ia_verify.py",
   "tools/patch_amp.py",
   "tools/effects.py",
+  "tools/patch_menu.py",
+  "tools/image_store.py",
+  "tools/patch_splash.py",
+  "tools/splash_emoji.py",
+  "tools/setting_ids.py",
+  "tools/features/__init__.py",
+  "tools/features/bpm.py",
+  "tools/features/dsp_meter.py",
+  "tools/features/long_press.py",
+  "tools/features/more_snapshots.py",
+  "tools/features/splash.py",
+  "tools/features/tuner.py",
   "tools/kit_patch_amp.py",
   "tools/sharc/entry4_blob.py",
   "tools/sharc/nam_lite.py",
@@ -105,7 +117,7 @@ async function boot() {
     if (!r.ok) throw new Error("Could not load " + path + " (" + r.status + ").");
     return [path, new Uint8Array(await r.arrayBuffer())];
   }));
-  ["/repo", "/repo/tools", "/repo/tools/sharc", "/repo/tools/ramboot", "/repo/build"].forEach(function (d) {
+  ["/repo", "/repo/tools", "/repo/tools/features", "/repo/tools/sharc", "/repo/tools/ramboot", "/repo/build"].forEach(function (d) {
     try { p.FS.mkdir(d); } catch (e) { /* exists */ }
   });
   files.forEach(function (f) { p.FS.writeFile("/repo/" + f[0], f[1]); });
@@ -147,6 +159,12 @@ async function build(stock) {
       if (base !== "build/stock.hxf") p.FS.unlink("/repo/" + base);
       base = out;
     });
+    if (unit === "HX_Stomp") {
+      step(4, "Adding the CustomOS features…",
+           ["tools/patch_menu.py", base, "build/nam_lite_menu.l6ia"]);
+      p.FS.unlink("/repo/" + base);
+      base = "build/nam_lite_menu.l6ia";
+    }
     step(5, "Adding the kernel to the DSP program…",
          ["tools/patch_amp.py", "patch", base, "build/nam_lite.l6ia", "--asm", "build/nam_lite.asm"]);
     p.FS.unlink("/repo/" + base);
