@@ -134,10 +134,10 @@ def main():
         src = dst
     base = src
     if unit == "HX_Stomp":
-        menu = os.path.join(build, "nam_lite_menu.l6ia")
-        run(py, "tools/patch_menu.py", base, menu, "--cwd", os.getcwd())
+        titled = os.path.join(build, "nam_lite_menu.l6ia")
+        run(py, "tools/patch_menu.py", base, titled, "--cwd", os.getcwd())
         os.remove(base)
-        base = menu
+        base = titled
     run(py, "tools/patch_amp.py", "patch", base, image, "--asm", asm)
     report = run(py, "tools/l6ia_verify.py", image)
     if "ALL OK" not in report:
